@@ -12,7 +12,7 @@ DOCKER_COMPOSE = docker compose
  bash:
 	 $(DOCKER_COMPOSE) exec client bash
 
-	 logs:
+logs:
 	 $(DOCKER_COMPOSE) logs -f client
 
  build:

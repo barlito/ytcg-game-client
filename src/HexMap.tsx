@@ -1,11 +1,7 @@
 import { HexGrid, Layout } from "react-hexgrid";
 import {HexTile} from "./HexTile.tsx";
 
-type Props = {
-    onDrop: (hexKey: string) => void;
-};
-
-export const HexMap = ({ onDrop }: Props) => {
+export const HexMap = () => {
     const hexes = [
         { q: 0, r: 0},
         { q: 1, r: 0},
@@ -21,8 +17,7 @@ export const HexMap = ({ onDrop }: Props) => {
                         key={`${hex.q},${hex.r}`}
                         q={hex.q}
                         r={hex.r}
-                        s={hex.s}
-                        onDrop={onDrop}
+                        // s={hex.s}
                     />
                 ))}
             </Layout>

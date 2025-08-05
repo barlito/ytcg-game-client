@@ -1,14 +1,12 @@
 import {Card} from "./Card.tsx";
+import {useGameStore} from "./stores/game.ts";
 
 export const Hand = () => {
-    const cards = [
-        { id: "fireball", name: "Fireball" },
-        { id: "defend", name: "Defend" },
-    ];
+    const hand = useGameStore((state) => state.hand);
 
     return (
         <div style={{ display: "flex", flexDirection: "row", color: "black" }}>
-            {cards.map((card) => (
+            {hand.map((card) => (
                 <Card key={card.id} card={card} />
             ))}
         </div>

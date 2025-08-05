@@ -1,18 +1,14 @@
 import { useDrag } from "react-dnd";
-
-type Card = {
-    id: string;
-    name: string;
-};
+import type {Card as CardType} from "@/stores/game";
 
 type CardProps = {
-    card: Card;
+    card: CardType;
 };
 
 export const Card = ({ card }: CardProps) => {
     const [{ isDragging }, dragRef] = useDrag({
         type: "CARD",
-        item: { id: card.id },
+        item: { ...card },
         collect: (monitor) => ({
             isDragging: monitor.isDragging(),
         }),
