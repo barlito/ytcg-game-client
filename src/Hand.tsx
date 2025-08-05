@@ -1,34 +1,4 @@
-import { useDrag } from "react-dnd";
-
-type Props = {
-    card: { id: string; name: string };
-};
-
-export const Card = ({ card }: Props) => {
-    const [{ isDragging }, dragRef] = useDrag({
-        type: "CARD",
-        item: { id: card.id },
-        collect: (monitor) => ({
-            isDragging: monitor.isDragging(),
-        }),
-    });
-
-    return (
-        <div
-            ref={dragRef}
-            style={{
-                opacity: isDragging ? 0.5 : 1,
-                border: "1px solid black",
-                padding: "0.5rem",
-                margin: "0.5rem",
-                background: "white",
-                cursor: "move",
-            }}
-        >
-            {card.name}
-        </div>
-    );
-};
+import {Card} from "./Card.tsx";
 
 export const Hand = () => {
     const cards = [
@@ -37,7 +7,7 @@ export const Hand = () => {
     ];
 
     return (
-        <div style={{ display: "flex", flexDirection: "row" }}>
+        <div style={{ display: "flex", flexDirection: "row", color: "black" }}>
             {cards.map((card) => (
                 <Card key={card.id} card={card} />
             ))}
