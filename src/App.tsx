@@ -9,7 +9,12 @@ export default function App() {
     const playCard = useGameStore((state) => state.playCard);
 
     return (
-        <div className="ytcg-root">
+        <div className="ytcg-root"
+             style={{
+                 width: "100vw",
+                 height: "100vh",
+                 overflow: "hidden",
+             }}>
             <header>
                 <h1>YTCG - Map PoC</h1>
             </header>

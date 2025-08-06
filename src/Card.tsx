@@ -6,88 +6,78 @@ import type {Card as CardType} from "./stores/game";
 function useSmoothTilt(transform, isDragging) {
     const lastPosRef = useRef({ x: 0, y: 0 });
     const [tilt, setTilt] = useState({ tiltX: 0, tiltY: 0 });
-    const rafRef = useRef(null);
-    const isAnimatingRef = useRef(false);
+    const rafRef = useRef();
 
-    // Constants
+    // "Intensité" du vent
     const speedToTilt = 0.5;
     const maxTilt = 10;
     const friction = 0.94;
     const lerpAmt = 0.10;
 
-    // Animation de friction quand on ne bouge plus
+    // Animation de retour à zéro avec friction
+    const animate = useCallback(() => {
+        setTilt(prev => {
+            let { tiltX, tiltY } = prev;
+            // Seuil plus large pour éviter les resets secs
+            if (Math.abs(tiltX) < 0.3 && Math.abs(tiltY) < 0.3) {
+                return { tiltX: 0, tiltY: 0 };
+            }
+            return {
+                tiltX: tiltX * friction,
+                tiltY: tiltY * friction,
+            };
+        });
+        rafRef.current = requestAnimationFrame(animate);
+    }, [friction]);
+
+    // Gestion du dragging et calcul du tilt basé sur la vitesse
     useEffect(() => {
-        if (!isDragging) {
-            // Reset immédiat quand on arrête de drag
-            if (rafRef.current) {
-                cancelAnimationFrame(rafRef.current);
-                rafRef.current = null;
-            }
-            isAnimatingRef.current = false;
-            setTilt({ tiltX: 0, tiltY: 0 });
-            lastPosRef.current = { x: 0, y: 0 };
-            return;
-        }
+        if (isDragging && transform) {
+            const dx = transform.x - lastPosRef.current.x;
+            const dy = transform.y - lastPosRef.current.y;
+            lastPosRef.current = { x: transform.x, y: transform.y };
 
-        // Animation de friction pendant le drag
-        const animate = () => {
             setTilt(prev => {
-                const { tiltX, tiltY } = prev;
-                if (Math.abs(tiltX) < 0.3 && Math.abs(tiltY) < 0.3) {
-                    isAnimatingRef.current = false;
-                    return { tiltX: 0, tiltY: 0 };
-                }
-                if (isAnimatingRef.current) {
-                    rafRef.current = requestAnimationFrame(animate);
-                }
-                return {
-                    tiltX: tiltX * friction,
-                    tiltY: tiltY * friction,
-                };
-            });
-        };
-
-        if (!isAnimatingRef.current) {
-            isAnimatingRef.current = true;
-            rafRef.current = requestAnimationFrame(animate);
-        }
-
-        return () => {
-            if (rafRef.current) {
-                cancelAnimationFrame(rafRef.current);
-                rafRef.current = null;
-            }
-            isAnimatingRef.current = false;
-        };
-    }, [isDragging]);
-
-    // Calcul du tilt basé sur le mouvement - sans useEffect !
-    if (isDragging && transform) {
-        const currentX = transform.x || 0;
-        const currentY = transform.y || 0;
-
-        const dx = currentX - lastPosRef.current.x;
-        const dy = currentY - lastPosRef.current.y;
-
-        // Seulement si il y a eu un mouvement significatif
-        if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
-            lastPosRef.current = { x: currentX, y: currentY };
-
-            // Mise à jour immédiate du tilt
-            setTilt(prev => {
+                // Nouveau "cible" tilt basé sur la vitesse du curseur
                 let targetTiltY = prev.tiltY - dx * speedToTilt;
                 let targetTiltX = prev.tiltX + dy * speedToTilt;
 
+                // Lissage avec interpolation linéaire (lerp)
                 targetTiltY = prev.tiltY + (targetTiltY - prev.tiltY) * lerpAmt;
                 targetTiltX = prev.tiltX + (targetTiltX - prev.tiltX) * lerpAmt;
 
+                // Clamp
                 targetTiltY = Math.max(Math.min(targetTiltY, maxTilt), -maxTilt);
                 targetTiltX = Math.max(Math.min(targetTiltX, maxTilt), -maxTilt);
 
                 return { tiltX: targetTiltX, tiltY: targetTiltY };
             });
         }
-    }
+    }, [transform?.x, transform?.y, isDragging, speedToTilt, lerpAmt, maxTilt]);
+
+    // Gestion de l'arrêt du dragging
+    useEffect(() => {
+        if (isDragging) {
+            // Démarrer l'animation de friction
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+            }
+            rafRef.current = requestAnimationFrame(animate);
+        } else {
+            // Arrêter l'animation et reset
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+            }
+            setTilt({ tiltX: 0, tiltY: 0 });
+            lastPosRef.current = { x: 0, y: 0 };
+        }
+
+        return () => {
+            if (rafRef.current) {
+                cancelAnimationFrame(rafRef.current);
+            }
+        };
+    }, [isDragging, animate]);
 
     return tilt;
 }
