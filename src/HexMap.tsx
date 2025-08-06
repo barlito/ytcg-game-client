@@ -1,23 +1,33 @@
-import { HexGrid, Layout } from "react-hexgrid";
+import {HexGrid, Layout} from "react-hexgrid";
 import {HexTile} from "./HexTile.tsx";
 
+function generateHexes(radius = 3) {
+    const hexes = [];
+    for (let q = -radius; q <= radius; q++) {
+        for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
+            hexes.push({q, r});
+        }
+    }
+    return hexes;
+}
+
 export const HexMap = () => {
-    const hexes = [
-        { q: 0, r: 0},
-        { q: 1, r: 0},
-        { q: 0, r: 1},
-        { q: -1, r: 1},
-    ];
+    const hexes = generateHexes(2); // change "3" for even bigger map
 
     return (
-        <HexGrid width={800} height={600}>
-            <Layout size={{ x: 10, y: 10 }} flat={false} spacing={1.1} origin={{ x: 0, y: 0 }}>
+        <HexGrid
+            width={"100vw"}
+            height={540}
+            style={{
+                maxWidth: "95vw",
+                maxHeight: "calc(100vh - 320px)",
+            }}>
+            <Layout size={{x: 10, y: 10}} flat={true} spacing={1.1} origin={{x: 0, y: 0}}>
                 {hexes.map((hex) => (
                     <HexTile
                         key={`${hex.q},${hex.r}`}
                         q={hex.q}
                         r={hex.r}
-                        // s={hex.s}
                     />
                 ))}
             </Layout>

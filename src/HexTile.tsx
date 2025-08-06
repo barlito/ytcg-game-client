@@ -1,6 +1,7 @@
 import { HexGrid, Layout, Hexagon, Text, Pattern, Path, Hex } from 'react-hexgrid';
 import { useDrop } from "react-dnd";
 import {useGameStore} from "./stores/game.ts";
+import { useDroppable } from "@dnd-kit/core";
 
 type HexTileProps = {
     q: number;
@@ -10,23 +11,17 @@ type HexTileProps = {
 };
 
 export const HexTile = ({ q, r, s }: HexTileProps) => {
-    const playCard = useGameStore((state) => state.playCard);
     const board = useGameStore((state) => state.board);
     const hexKey = `${q},${r}`;
     const card = board[hexKey];
 
-    const [{ isOver }, dropRef] = useDrop({
-        accept: "CARD",
-        drop: (item: { id: string; name: string }) => {
-            playCard(hexKey, item);
-        },
-        collect: (monitor) => ({
-            isOver: monitor.isOver(),
-        }),
+    const { isOver, setNodeRef } = useDroppable({
+        id: hexKey,
+        data: { hexKey },
     });
 
     return (
-        <g ref={dropRef}>
+        <g ref={setNodeRef}>
             <Hexagon
                 q={q}
                 r={r}

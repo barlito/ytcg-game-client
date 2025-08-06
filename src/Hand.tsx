@@ -1,5 +1,5 @@
-import {Card} from "./Card.tsx";
 import {useGameStore} from "./stores/game.ts";
+import { Card } from "./Card";
 
 export const Hand = () => {
     const hand = useGameStore((state) => state.hand);
