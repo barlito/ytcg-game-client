@@ -12,14 +12,14 @@ DOCKER_COMPOSE = docker compose
  bash:
 	 $(DOCKER_COMPOSE) exec client bash
 
-logs:
+ logs:
 	 $(DOCKER_COMPOSE) logs -f client
 
  build:
-	 docker-compose exec client npm run build
+	 docker compose exec client npm run build
 
  lint:
-	 docker-compose exec client npm run lint
+	 docker compose exec client npm run lint
 
  format:
-	 docker-compose exec client npm run format
+	 docker compose exec client npm run format
