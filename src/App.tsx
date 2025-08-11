@@ -1,47 +1,80 @@
-import React, { useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import Board from './components/board/Board'
 import PlayerHand from './components/hand/PlayerHand'
 import {
     DndContext,
     PointerSensor,
     useSensor,
-    useSensors,
-    DragOverlay
+    useSensors
 } from '@dnd-kit/core'
-import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core'
-import CardView from './components/hand/CardView'
+import DragLayer, { type Wind } from './components/hand/DragLayer'
+import type { DragStartEvent, DragEndEvent, DragMoveEvent } from '@dnd-kit/core'
 import type { CardData } from './components/hand/CardView'
+import CardView from "./components/hand/CardView";
+
+const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
 
 export default function App() {
-    // Sensors: petit seuil pour éviter les drags accidentels
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
     )
 
-    // Carte actuellement “prise”
     const [activeCard, setActiveCard] = useState<CardData | null>(null)
     const [activeId, setActiveId] = useState<string | null>(null)
-
-    // Pour l’exemple: on mémorise la dernière carte déposée sur le board
     const [lastDrop, setLastDrop] = useState<string | null>(null)
 
-    const handleDragStart = (e: DragStartEvent) => {
+    const [wind, setWind] = useState<Wind>({ rx: 0, ry: 0, angle: 0, strength: 0 })
+    const prevRef = useRef<{ x: number; y: number; t: number } | null>(null)
+
+    const handleDragStart = useCallback((e: DragStartEvent) => {
         setActiveId(String(e.active.id))
         const card = e.active.data.current?.card as CardData | undefined
         if (card) setActiveCard(card)
-    }
+        prevRef.current = null
+        setWind({ rx: 0, ry: 0, angle: 0, strength: 0 })
+    }, [])
 
-    const handleDragEnd = (e: DragEndEvent) => {
+    const handleDragMove = useCallback((e: DragMoveEvent) => {
+        if (!activeId || String(e.active.id) !== activeId) return
+        const now = performance.now()
+        const dx = e.delta.x
+        const dy = e.delta.y
+
+        if (!prevRef.current) {
+            prevRef.current = { x: dx, y: dy, t: now }
+            return
+        }
+
+        const dt = now - prevRef.current.t || 16
+        const ddx = dx - prevRef.current.x
+        const ddy = dy - prevRef.current.y
+
+        const vx = ddx / dt // px/ms
+        const vy = ddy / dt
+
+        const maxTilt = 12
+        const rx = clamp(vy * 10, -maxTilt, maxTilt)
+        const ry = clamp(-vx * 10, -maxTilt, maxTilt)
+        const angle = Math.atan2(vy, vx) * (180 / Math.PI)
+        const speed = Math.hypot(vx, vy)
+        const strength = clamp(speed * 1.8, 0, 1)
+
+        setWind({ rx, ry, angle, strength })
+        prevRef.current = { x: dx, y: dy, t: now }
+    }, [activeId])
+
+    const handleDragEnd = useCallback((e: DragEndEvent) => {
         if (e.over && e.over.id === 'board') {
             setLastDrop(String(e.active.id))
         }
         setActiveCard(null)
         setActiveId(null)
-    }
+        setWind({ rx: 0, ry: 0, angle: 0, strength: 0 })
+        prevRef.current = null
+    }, [])
 
     return (
         <div className="min-h-screen grid grid-rows-[auto,1fr,auto] bg-base-200">
-            {/* Top bar */}
             <header className="navbar bg-base-100/70 backdrop-blur border-b border-base-300 px-4">
                 <div className="flex-1">
                     <a className="text-xl font-bold">Youl TCG</a>
@@ -54,29 +87,25 @@ export default function App() {
                 </div>
             </header>
 
-            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                {/* Board central */}
+            <DndContext
+                sensors={sensors}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}    // ← calcule le “vent” ici (stable)
+                onDragEnd={handleDragEnd}
+            >
                 <main className="p-4">
                     <div className="mx-auto max-w-6xl">
                         <Board lastDrop={lastDrop} />
                     </div>
                 </main>
 
-                {/* Main du joueur (sticky en bas) */}
                 <footer className="bg-base-100/70 backdrop-blur border-t border-base-300 px-4 py-3">
                     <div className="w-full">
                         <PlayerHand activeId={activeId} />
                     </div>
                 </footer>
 
-                {/* Drag overlay : c’est ici qu’on animera plus tard */}
-                <DragOverlay dropAnimation={null}>
-                    {activeCard ? (
-                        <div className="pointer-events-none">
-                            <CardView card={activeCard} highlight />
-                        </div>
-                    ) : null}
-                </DragOverlay>
+                <DragLayer activeCard={activeCard} wind={wind} />
             </DndContext>
         </div>
     )

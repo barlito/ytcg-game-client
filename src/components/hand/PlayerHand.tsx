@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import Card from './Card'
+import DraggableCard from './DraggableCard.tsx'
 import type { CardData } from './CardView'
 
 type Props = {
@@ -20,7 +20,7 @@ export default function PlayerHand({ activeId }: Props) {
             <div className="hand-scroll w-full overflow-x-auto overflow-y-visible">
                 <div className="mx-auto w-fit flex items-end gap-4 px-6 py-4 min-h-[14rem]">
                     {cards.map(card => (
-                        <Card key={card.id} card={card} activeId={activeId} />
+                        <DraggableCard key={card.id} card={card} activeId={activeId} />
                     ))}
                 </div>
             </div>

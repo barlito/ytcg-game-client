@@ -8,7 +8,7 @@ type Props = {
     activeId?: string | null
 }
 
-export default function Card({ card, activeId }: Props) {
+export default function DraggableCard({ card, activeId }: Props) {
     const { attributes, listeners, setNodeRef } = useDraggable({
         id: card.id,
         data: { card }
