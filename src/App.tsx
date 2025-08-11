@@ -5,7 +5,8 @@ import {
     DndContext,
     PointerSensor,
     useSensor,
-    useSensors
+    useSensors,
+    pointerWithin,
 } from '@dnd-kit/core'
 import DragLayer, { type Wind } from './components/hand/DragLayer'
 import type { DragStartEvent, DragEndEvent, DragMoveEvent } from '@dnd-kit/core'
@@ -89,8 +90,9 @@ export default function App() {
 
             <DndContext
                 sensors={sensors}
+                collisionDetection={pointerWithin}
                 onDragStart={handleDragStart}
-                onDragMove={handleDragMove}    // ← calcule le “vent” ici (stable)
+                onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
             >
                 <main className="p-4">
