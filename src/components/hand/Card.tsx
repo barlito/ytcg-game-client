@@ -11,7 +11,7 @@ type Props = {
 export default function Card({ card, activeId }: Props) {
     const { attributes, listeners, setNodeRef } = useDraggable({
         id: card.id,
-        data: { card } // dispo dans DndContext.onDragStart via e.active.data.current.card
+        data: { card }
     })
 
     const isActive = activeId === card.id
@@ -23,7 +23,8 @@ export default function Card({ card, activeId }: Props) {
             {...attributes}
             className="cursor-grab active:cursor-grabbing"
         >
-            <CardView card={card} muted={isActive} />
+            {/* Pas de tilt au hover pendant le drag */}
+            <CardView card={card} muted={isActive} interactive={!isActive} />
         </div>
     )
 }

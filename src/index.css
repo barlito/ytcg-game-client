@@ -1,2 +1,10 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+
+.hand-scroll {
+    scrollbar-width: none;        /* Firefox */
+    -ms-overflow-style: none;     /* IE/Edge legacy */
+}
+.hand-scroll::-webkit-scrollbar { display: none; } /* Chrome/Safari/Edge */
+

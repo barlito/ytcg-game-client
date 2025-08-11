@@ -7,7 +7,6 @@ type Props = {
 }
 
 export default function PlayerHand({ activeId }: Props) {
-    // Data mockée localement (comme demandé)
     const cards = useMemo<CardData[]>(() => ([
         { id: 'c1', name: 'Prairie Ranger', cost: 2, rarity: 'C',  clan: 'Warden' },
         { id: 'c2', name: 'Arcane Scholar',  cost: 3, rarity: 'R',  clan: 'Mystic' },
@@ -17,10 +16,14 @@ export default function PlayerHand({ activeId }: Props) {
     ]), [])
 
     return (
-        <div className="flex items-center gap-3 overflow-x-auto py-1">
-            {cards.map(card => (
-                <Card key={card.id} card={card} activeId={activeId} />
-            ))}
+        <div className="relative w-full">
+            <div className="hand-scroll w-full overflow-x-auto overflow-y-visible">
+                <div className="mx-auto w-fit flex items-end gap-4 px-6 py-4 min-h-[14rem]">
+                    {cards.map(card => (
+                        <Card key={card.id} card={card} activeId={activeId} />
+                    ))}
+                </div>
+            </div>
         </div>
     )
 }

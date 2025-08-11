@@ -64,7 +64,7 @@ export default function App() {
 
                 {/* Main du joueur (sticky en bas) */}
                 <footer className="bg-base-100/70 backdrop-blur border-t border-base-300 px-4 py-3">
-                    <div className="mx-auto max-w-6xl">
+                    <div className="w-full">
                         <PlayerHand activeId={activeId} />
                     </div>
                 </footer>
