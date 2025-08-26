@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import DraggableCard from './DraggableCard.tsx'
 import type { CardData } from './CardView'
 
@@ -8,11 +8,11 @@ type Props = {
 
 export default function PlayerHand({ activeId }: Props) {
     const cards = useMemo<CardData[]>(() => ([
-        { id: 'c1', name: 'Prairie Ranger', cost: 2, rarity: 'C',  clan: 'Warden' },
-        { id: 'c2', name: 'Arcane Scholar',  cost: 3, rarity: 'R',  clan: 'Mystic' },
-        { id: 'c3', name: 'Ironclad Knight', cost: 4, rarity: 'SR', clan: 'Vanguard' },
-        { id: 'c4', name: 'Shadow Stalker',  cost: 2, rarity: 'C',  clan: 'Rogue' },
-        { id: 'c5', name: 'Sunblade Adept',  cost: 1, rarity: 'UR', clan: 'Sanctum' },
+        { id: 'c1', name: 'Prairie Ranger', cost: 2, rarity: 'C',  clan: 'Warden',  imageUrl: 'https://picsum.photos/300/420?random=c1' },
+        { id: 'c2', name: 'Arcane Scholar',  cost: 3, rarity: 'R',  clan: 'Mystic',  imageUrl: 'https://picsum.photos/300/420?random=c2' },
+        { id: 'c3', name: 'Ironclad Knight', cost: 4, rarity: 'SR', clan: 'Vanguard', imageUrl: 'https://picsum.photos/300/420?random=c3' },
+        { id: 'c4', name: 'Shadow Stalker',  cost: 2, rarity: 'C',  clan: 'Rogue',   imageUrl: 'https://picsum.photos/300/420?random=c4' },
+        { id: 'c5', name: 'Sunblade Adept',  cost: 1, rarity: 'UR', clan: 'Sanctum', imageUrl: 'https://picsum.photos/300/420?random=c5' },
     ]), [])
 
     return (

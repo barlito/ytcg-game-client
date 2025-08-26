@@ -1,27 +1,32 @@
-import React, { useMemo, useState } from "react"
+import { useMemo, useState, type WheelEvent } from "react"
 import { useDroppable, useDndMonitor } from "@dnd-kit/core"
 import { defineHex, Grid } from "honeycomb-grid"
 import { useGameStore } from "../../stores/game"
+import type { CardData } from "../hand/CardView"
 
 type BoardProps = {
     lastDrop: string | null
 }
 
-const PRESET_CELLS: [number, number][] = [
-    [0, 0],
-    [1, 0],
-    [0, 1],
-    [-1, 1],
-    [1, -1],
-    [2, -1],
-    [2, 0],
-] as const
+const PRESET_CELLS: [number, number][] = (() => {
+    const width = 5
+    const height = 6
+    const qOffset = Math.floor(width / 2)
+    const rOffset = Math.floor(height / 2)
+    const cells: [number, number][] = []
+    for (let q = -qOffset; q < width - qOffset; q++) {
+        for (let r = -rOffset; r < height - rOffset; r++) {
+            cells.push([q, r])
+        }
+    }
+    return cells
+})()
 
 export default function Board({ lastDrop }: BoardProps) {
     // Droppable global (pas d'effet visuel)
     const { setNodeRef } = useDroppable({ id: "board" })
 
-    const Hex = useMemo(() => defineHex({ dimensions: 28, origin: "topLeft" }), [])
+    const Hex = useMemo(() => defineHex({ dimensions: 40, origin: "topLeft" }), [])
     const grid = useMemo(() => new Grid(Hex, PRESET_CELLS), [Hex])
 
     const { polys, viewBox } = useMemo(() => {
@@ -29,7 +34,7 @@ export default function Board({ lastDrop }: BoardProps) {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
         const list: Poly[] = []
 
-        for (const hex of grid as any) {
+        for (const hex of grid as any) { // eslint-disable-line @typescript-eslint/no-explicit-any
             const q: number = hex.q
             const r: number = hex.r
             const id = `hex:${q},${r}`
@@ -57,6 +62,9 @@ export default function Board({ lastDrop }: BoardProps) {
 
     const [lastHexLog, setLastHexLog] = useState<string | null>(null)
     const [isDragging, setIsDragging] = useState(false)
+    const [zoom, setZoom] = useState(1)
+
+    const playCard = useGameStore((s) => s.playCard)
 
     useDndMonitor({
         onDragStart() {
@@ -69,60 +77,75 @@ export default function Board({ lastDrop }: BoardProps) {
             setIsDragging(false)
             const overId = e.over?.id
             if (typeof overId === "string" && overId.startsWith("hex:")) {
-                const cardId = String(e.active.id)
-                const msg = `${cardId} → ${overId}`
-                setLastHexLog(msg)
-                // eslint-disable-next-line no-console
-                console.log("[Board] Dropped", msg)
+                const card = e.active.data.current?.card as CardData | undefined
+                if (card) {
+                    const hexKey = overId.replace("hex:", "")
+                    const msg = `${card.id} → ${overId}`
+                    setLastHexLog(msg)
+                    const current = useGameStore.getState().board
+                    if (!current[hexKey]) {
+                        playCard(hexKey, card)
+                    }
+                    console.log("[Board] Dropped", msg)
+                }
             }
         },
     })
 
     const board = useGameStore((s) => s.board)
 
+    const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const delta = e.deltaY < 0 ? 0.1 : -0.1
+        setZoom((z) => Math.min(2, Math.max(0.5, z + delta)))
+    }
+
     return (
         <div
             ref={setNodeRef}
-            className="relative select-none rounded-xl border border-base-300 bg-base-100/60 backdrop-blur shadow-sm p-3"
+            className="relative w-full h-full select-none"
             aria-label="Board (droppable)"
+            onWheel={handleWheel}
         >
-            <div className="flex items-center justify-between mb-2">
-                <span className="text-sm opacity-80">Mini map (honeycomb v4)</span>
-                <div className="flex items-center gap-2">
-                    {lastHexLog && (
-                        <span className="badge badge-sm badge-outline">Hex drop: {lastHexLog}</span>
-                    )}
-                    {lastDrop && (
-                        <span className="badge badge-sm badge-ghost">Board drop: {lastDrop}</span>
-                    )}
-                </div>
-            </div>
+            <svg
+                className="w-full h-full"
+                viewBox={viewBox}
+                role="img"
+                aria-label="Hex map"
+                style={{ transform: `scale(${zoom})`, transformOrigin: "50% 50%" }}
+            >
+                <defs>
+                    <linearGradient id="hexFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#4f46e5" />
+                        <stop offset="100%" stopColor="#1f2937" />
+                    </linearGradient>
+                    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.25" />
+                    </filter>
+                </defs>
 
-            <div className="w-full overflow-auto">
-                <svg className="w-full h-auto" viewBox={viewBox} role="img" aria-label="Hex map">
-                    <defs>
-                        <linearGradient id="hexFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#4f46e5" />
-                            <stop offset="100%" stopColor="#1f2937" />
-                        </linearGradient>
-                        <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-                            <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.25" />
-                        </filter>
-                    </defs>
+                {polys.map((p) => (
+                    <HexDroppable
+                        key={p.id}
+                        id={p.id}
+                        points={p.points}
+                        label={`${p.q},${p.r}`}
+                        cx={p.cx}
+                        cy={p.cy}
+                        occupied={board[p.key]}
+                        isDragging={isDragging}
+                    />
+                ))}
+            </svg>
 
-                    {polys.map((p) => (
-                        <HexDroppable
-                            key={p.id}
-                            id={p.id}
-                            points={p.points}
-                            label={`${p.q},${p.r}`}
-                            cx={p.cx}
-                            cy={p.cy}
-                            occupied={board[p.key]}
-                            isDragging={isDragging}
-                        />
-                    ))}
-                </svg>
+            <div className="absolute top-2 left-2 flex gap-2 text-xs">
+                {lastHexLog && (
+                    <span className="badge badge-sm badge-outline">Hex drop: {lastHexLog}</span>
+                )}
+                {lastDrop && (
+                    <span className="badge badge-sm badge-ghost">Board drop: {lastDrop}</span>
+                )}
             </div>
         </div>
     )
@@ -142,10 +165,13 @@ function HexDroppable({
     label: string
     cx: number
     cy: number
-    occupied?: { id: string; name: string } | undefined
+    occupied?: CardData | undefined
     isDragging: boolean
 }) {
-    const { setNodeRef, isOver } = useDroppable({ id })
+    const { setNodeRef, isOver } = useDroppable({ id }) as {
+        setNodeRef: (element: SVGGElement | null) => void
+        isOver: boolean
+    }
 
     const isValidTarget = isDragging && !occupied
 
@@ -190,22 +216,14 @@ function HexDroppable({
 
             {/* Occupied marker */}
             {occupied && (
-                <g aria-label={`occupied by ${occupied.name}`}>
-                    <circle cx={cx} cy={cy} r={8} fill="#0ea5e9" opacity={0.9} />
-                    <text
-                        x={cx}
-                        y={cy + 4}
-                        className="select-none pointer-events-none"
-                        style={{
-                            fill: "white",
-                            font: "10px system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Helvetica Neue, Arial, Noto Sans",
-                            textAnchor: "middle",
-                            fontWeight: 700,
-                        }}
-                    >
-                        {occupied.name.slice(0, 1).toUpperCase()}
-                    </text>
-                </g>
+                <image
+                    x={cx - 15}
+                    y={cy - 21}
+                    width={30}
+                    height={42}
+                    href={occupied.imageUrl ?? `https://picsum.photos/300/420?random=${encodeURIComponent(occupied.id)}`}
+                    preserveAspectRatio="xMidYMid slice"
+                />
             )}
 
             {/* Axial label */}
