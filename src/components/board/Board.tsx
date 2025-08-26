@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react"
+import { useMemo, useState, type WheelEvent } from "react"
 import { useDroppable, useDndMonitor } from "@dnd-kit/core"
 import { defineHex, Grid } from "honeycomb-grid"
 import { useGameStore } from "../../stores/game"
@@ -26,7 +26,7 @@ export default function Board({ lastDrop }: BoardProps) {
     // Droppable global (pas d'effet visuel)
     const { setNodeRef } = useDroppable({ id: "board" })
 
-    const Hex = useMemo(() => defineHex({ dimensions: 28, origin: "topLeft" }), [])
+    const Hex = useMemo(() => defineHex({ dimensions: 40, origin: "topLeft" }), [])
     const grid = useMemo(() => new Grid(Hex, PRESET_CELLS), [Hex])
 
     const { polys, viewBox } = useMemo(() => {
@@ -94,8 +94,9 @@ export default function Board({ lastDrop }: BoardProps) {
 
     const board = useGameStore((s) => s.board)
 
-    const handleWheel = (e: React.WheelEvent) => {
+    const handleWheel = (e: WheelEvent<HTMLDivElement>) => {
         e.preventDefault()
+        e.stopPropagation()
         const delta = e.deltaY < 0 ? 0.1 : -0.1
         setZoom((z) => Math.min(2, Math.max(0.5, z + delta)))
     }
@@ -103,52 +104,48 @@ export default function Board({ lastDrop }: BoardProps) {
     return (
         <div
             ref={setNodeRef}
-            className="relative select-none rounded-xl border border-base-300 bg-base-100/60 backdrop-blur shadow-sm p-3"
+            className="relative w-full h-full select-none"
             aria-label="Board (droppable)"
+            onWheel={handleWheel}
         >
-            <div className="flex items-center justify-between mb-2">
-                <span className="text-sm opacity-80">Mini map (honeycomb v4)</span>
-                <div className="flex items-center gap-2">
-                    {lastHexLog && (
-                        <span className="badge badge-sm badge-outline">Hex drop: {lastHexLog}</span>
-                    )}
-                    {lastDrop && (
-                        <span className="badge badge-sm badge-ghost">Board drop: {lastDrop}</span>
-                    )}
-                </div>
-            </div>
+            <svg
+                className="w-full h-full"
+                viewBox={viewBox}
+                role="img"
+                aria-label="Hex map"
+                style={{ transform: `scale(${zoom})`, transformOrigin: "50% 50%" }}
+            >
+                <defs>
+                    <linearGradient id="hexFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#4f46e5" />
+                        <stop offset="100%" stopColor="#1f2937" />
+                    </linearGradient>
+                    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+                        <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.25" />
+                    </filter>
+                </defs>
 
-            <div className="w-full overflow-hidden" onWheel={handleWheel}>
-                <svg
-                    className="w-full h-auto"
-                    viewBox={viewBox}
-                    role="img"
-                    aria-label="Hex map"
-                    style={{ transform: `scale(${zoom})`, transformOrigin: "50% 50%" }}
-                >
-                    <defs>
-                        <linearGradient id="hexFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#4f46e5" />
-                            <stop offset="100%" stopColor="#1f2937" />
-                        </linearGradient>
-                        <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-                            <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.25" />
-                        </filter>
-                    </defs>
+                {polys.map((p) => (
+                    <HexDroppable
+                        key={p.id}
+                        id={p.id}
+                        points={p.points}
+                        label={`${p.q},${p.r}`}
+                        cx={p.cx}
+                        cy={p.cy}
+                        occupied={board[p.key]}
+                        isDragging={isDragging}
+                    />
+                ))}
+            </svg>
 
-                    {polys.map((p) => (
-                        <HexDroppable
-                            key={p.id}
-                            id={p.id}
-                            points={p.points}
-                            label={`${p.q},${p.r}`}
-                            cx={p.cx}
-                            cy={p.cy}
-                            occupied={board[p.key]}
-                            isDragging={isDragging}
-                        />
-                    ))}
-                </svg>
+            <div className="absolute top-2 left-2 flex gap-2 text-xs">
+                {lastHexLog && (
+                    <span className="badge badge-sm badge-outline">Hex drop: {lastHexLog}</span>
+                )}
+                {lastDrop && (
+                    <span className="badge badge-sm badge-ghost">Board drop: {lastDrop}</span>
+                )}
             </div>
         </div>
     )
@@ -171,7 +168,10 @@ function HexDroppable({
     occupied?: CardData | undefined
     isDragging: boolean
 }) {
-    const { setNodeRef, isOver } = useDroppable({ id })
+    const { setNodeRef, isOver } = useDroppable({ id }) as {
+        setNodeRef: (element: SVGGElement | null) => void
+        isOver: boolean
+    }
 
     const isValidTarget = isDragging && !occupied
 
@@ -217,10 +217,10 @@ function HexDroppable({
             {/* Occupied marker */}
             {occupied && (
                 <image
-                    x={cx - 20}
-                    y={cy - 28}
-                    width={40}
-                    height={56}
+                    x={cx - 15}
+                    y={cy - 21}
+                    width={30}
+                    height={42}
                     href={occupied.imageUrl ?? `https://picsum.photos/300/420?random=${encodeURIComponent(occupied.id)}`}
                     preserveAspectRatio="xMidYMid slice"
                 />

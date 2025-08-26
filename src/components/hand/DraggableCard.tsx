@@ -1,4 +1,3 @@
-import React from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import CardView from './CardView'
 import type { CardData } from './CardView'

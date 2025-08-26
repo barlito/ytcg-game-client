@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import DraggableCard from './DraggableCard.tsx'
 import type { CardData } from './CardView'
 

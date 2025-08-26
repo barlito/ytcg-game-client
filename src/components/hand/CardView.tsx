@@ -1,4 +1,4 @@
-import React from 'react'
+import { type CSSProperties } from 'react'
 import { useHoverTilt } from '../../hooks/useHoverTilt'
 
 export type CardData = {
@@ -25,7 +25,7 @@ export default function CardView({ card, muted = false, highlight = false, inter
         background: `radial-gradient(220px circle at ${tilt.shine.xPct}% ${tilt.shine.yPct}%,
       rgba(255,255,255,0.12), transparent 45%)`,
         pointerEvents: 'none' as const,
-    } satisfies React.CSSProperties;
+    } satisfies CSSProperties;
 
     const wrapperProps = interactive && !muted
         ? { ref: tilt.ref, onPointerMove: tilt.handlePointerMove, onPointerLeave: tilt.reset, style: tilt.style }

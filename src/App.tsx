@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import Board from './components/board/Board'
 import PlayerHand from './components/hand/PlayerHand'
 import {
@@ -74,7 +74,7 @@ export default function App() {
     }, [])
 
     return (
-        <div className="min-h-screen grid grid-rows-[auto,1fr,auto] bg-base-200">
+        <div className="h-screen overflow-hidden grid grid-rows-[auto,1fr,auto] bg-base-200">
             <header className="navbar bg-base-100/70 backdrop-blur border-b border-base-300 px-4">
                 <div className="flex-1">
                     <a className="text-xl font-bold">Youl TCG</a>
@@ -94,10 +94,8 @@ export default function App() {
                 onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
             >
-                <main className="p-4">
-                    <div className="mx-auto max-w-6xl">
-                        <Board lastDrop={lastDrop} />
-                    </div>
+                <main className="flex items-center justify-center overflow-hidden">
+                    <Board lastDrop={lastDrop} />
                 </main>
 
                 <footer className="bg-base-100/70 backdrop-blur border-t border-base-300 px-4 py-3">
