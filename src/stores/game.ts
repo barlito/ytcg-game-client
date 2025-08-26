@@ -1,21 +1,14 @@
 import { create } from "zustand";
-
-export type Card = {
-    id: string;
-    name: string;
-};
+import type { CardData } from "../components/hand/CardView";
 
 type GameState = {
-    hand: Card[];
-    board: Record<string, Card | undefined>; // clé = "q,r"
-    playCard: (hexKey: string, card: Card) => void;
+    hand: CardData[];
+    board: Record<string, CardData | undefined>; // clé = "q,r"
+    playCard: (hexKey: string, card: CardData) => void;
 };
 
 export const useGameStore = create<GameState>((set) => ({
-    hand: [
-        { id: "fireball", name: "Fireball" },
-        { id: "defend", name: "Defend" },
-    ],
+    hand: [],
     board: {},
     playCard: (hexKey, card) =>
         set((state) => ({

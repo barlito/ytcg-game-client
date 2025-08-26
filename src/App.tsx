@@ -11,7 +11,6 @@ import {
 import DragLayer, { type Wind } from './components/hand/DragLayer'
 import type { DragStartEvent, DragEndEvent, DragMoveEvent } from '@dnd-kit/core'
 import type { CardData } from './components/hand/CardView'
-import CardView from "./components/hand/CardView";
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
 
