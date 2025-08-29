@@ -21,7 +21,7 @@ export default function DragCardOverlay({ card, rx, ry, strength }: Props) {
             animate={{
                 rotateX: rx,
                 rotateY: ry,
-                scale: 1.06 + strength * 0.04,
+                scale: 0.6 + strength * 0.1,
                 boxShadow: `0 ${dropShadowY}px ${blur}px rgba(0,0,0,0.25)`
             }}
             transition={{ type: 'spring', stiffness: 380, damping: 28, mass: 0.6 }}

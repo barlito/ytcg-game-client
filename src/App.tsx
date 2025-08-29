@@ -75,8 +75,8 @@ export default function App() {
     }, [])
 
     return (
-        <div className="min-h-screen grid grid-rows-[auto,1fr,auto] bg-base-200">
-            <header className="navbar bg-base-100/70 backdrop-blur border-b border-base-300 px-4">
+        <div className="h-screen flex flex-col bg-base-200 overflow-hidden">
+            <header className="flex-shrink-0 navbar bg-base-100/70 backdrop-blur border-b border-base-300 px-4">
                 <div className="flex-1">
                     <a className="text-xl font-bold">Youl TCG</a>
                 </div>
@@ -95,13 +95,13 @@ export default function App() {
                 onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
             >
-                <main className="p-4">
-                    <div className="mx-auto max-w-6xl">
+                <main className="flex-1 p-4 overflow-hidden">
+                    <div className="w-full h-full">
                         <Board lastDrop={lastDrop} />
                     </div>
                 </main>
 
-                <footer className="bg-base-100/70 backdrop-blur border-t border-base-300 px-4 py-3">
+                <footer className="flex-shrink-0 bg-base-100/70 backdrop-blur border-t border-base-300 px-4 py-2">
                     <div className="w-full">
                         <PlayerHand activeId={activeId} />
                     </div>

@@ -1,20 +1,27 @@
-import React, { useMemo, useState } from "react"
+import React, { useMemo, useState, useRef, useCallback } from "react"
 import { useDroppable, useDndMonitor } from "@dnd-kit/core"
 import { defineHex, Grid } from "honeycomb-grid"
 import { useGameStore } from "../../stores/game"
+import CardView from "../hand/CardView"
 
 type BoardProps = {
     lastDrop: string | null
 }
 
 const PRESET_CELLS: [number, number][] = [
+    // Center hex
     [0, 0],
-    [1, 0],
-    [0, 1],
-    [-1, 1],
-    [1, -1],
-    [2, -1],
-    [2, 0],
+    
+    // First ring (6 hexes)
+    [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1], [1, -1],
+    
+    // Second ring (12 hexes)
+    [2, 0], [1, 1], [0, 2], [-1, 2], [-2, 2], [-2, 1],
+    [-2, 0], [-1, -1], [0, -2], [1, -2], [2, -2], [2, -1],
+    
+    // Third ring partial (11 hexes to reach 30 total)
+    [3, 0], [2, 1], [1, 2], [0, 3], [-1, 3], [-2, 3],
+    [-3, 2], [-3, 1], [-3, 0], [-2, -1], [-1, -2]
 ] as const
 
 export default function Board({ lastDrop }: BoardProps) {
@@ -57,6 +64,13 @@ export default function Board({ lastDrop }: BoardProps) {
 
     const [lastHexLog, setLastHexLog] = useState<string | null>(null)
     const [isDragging, setIsDragging] = useState(false)
+    
+    // Zoom and pan state
+    const [zoom, setZoom] = useState(1)
+    const [pan, setPan] = useState({ x: 0, y: 0 })
+    const [isPanning, setIsPanning] = useState(false)
+    const panStart = useRef({ x: 0, y: 0 })
+    const containerRef = useRef<HTMLDivElement>(null)
 
     useDndMonitor({
         onDragStart() {
@@ -70,24 +84,71 @@ export default function Board({ lastDrop }: BoardProps) {
             const overId = e.over?.id
             if (typeof overId === "string" && overId.startsWith("hex:")) {
                 const cardId = String(e.active.id)
-                const msg = `${cardId} → ${overId}`
-                setLastHexLog(msg)
-                // eslint-disable-next-line no-console
-                console.log("[Board] Dropped", msg)
+                const cardData = e.active.data.current?.card
+                const hexKey = overId.replace("hex:", "")
+                
+                if (cardData && !board[hexKey]) {
+                    // Place card in the game store
+                    useGameStore.getState().playCard(hexKey, {
+                        id: cardData.id,
+                        name: cardData.name
+                    })
+                    
+                    const msg = `${cardData.name} → ${hexKey}`
+                    setLastHexLog(msg)
+                    // eslint-disable-next-line no-console
+                    console.log("[Board] Placed card:", msg)
+                } else if (board[hexKey]) {
+                    // eslint-disable-next-line no-console
+                    console.log("[Board] Hex already occupied:", hexKey)
+                }
             }
         },
     })
+
+    // Zoom and pan handlers
+    const handleWheel = useCallback((e: React.WheelEvent) => {
+        e.preventDefault()
+        const delta = e.deltaY * -0.001
+        const newZoom = Math.max(0.5, Math.min(3, zoom + delta))
+        setZoom(newZoom)
+    }, [zoom])
+
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if (e.button === 0 && !isDragging) { // Left click and not dragging cards
+            setIsPanning(true)
+            panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y }
+        }
+    }, [pan, isDragging])
+
+    const handleMouseMove = useCallback((e: React.MouseEvent) => {
+        if (isPanning) {
+            setPan({
+                x: e.clientX - panStart.current.x,
+                y: e.clientY - panStart.current.y
+            })
+        }
+    }, [isPanning])
+
+    const handleMouseUp = useCallback(() => {
+        setIsPanning(false)
+    }, [])
 
     const board = useGameStore((s) => s.board)
 
     return (
         <div
-            ref={setNodeRef}
-            className="relative select-none rounded-xl border border-base-300 bg-base-100/60 backdrop-blur shadow-sm p-3"
+            ref={(node) => {
+                setNodeRef(node)
+                if (containerRef.current !== node) {
+                    containerRef.current = node
+                }
+            }}
+            className="relative select-none rounded-xl border border-base-300 bg-base-100/60 backdrop-blur shadow-sm p-3 h-full flex flex-col"
             aria-label="Board (droppable)"
         >
-            <div className="flex items-center justify-between mb-2">
-                <span className="text-sm opacity-80">Mini map (honeycomb v4)</span>
+            <div className="flex items-center justify-between mb-2 flex-shrink-0">
+                <span className="text-sm opacity-80">Hex Map (30 hexagons) - Zoom: {zoom.toFixed(1)}x</span>
                 <div className="flex items-center gap-2">
                     {lastHexLog && (
                         <span className="badge badge-sm badge-outline">Hex drop: {lastHexLog}</span>
@@ -98,8 +159,26 @@ export default function Board({ lastDrop }: BoardProps) {
                 </div>
             </div>
 
-            <div className="w-full overflow-auto">
-                <svg className="w-full h-auto" viewBox={viewBox} role="img" aria-label="Hex map">
+            <div 
+                className="flex-1 overflow-hidden cursor-grab active:cursor-grabbing"
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
+            >
+                <svg 
+                    className="w-full h-full" 
+                    viewBox={viewBox} 
+                    role="img" 
+                    aria-label="Hex map"
+                    style={{
+                        transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                        transformOrigin: 'center center',
+                        transition: isPanning ? 'none' : 'transform 0.1s ease-out'
+                    }}
+                >
                     <defs>
                         <linearGradient id="hexFill" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="0%" stopColor="#4f46e5" />
@@ -150,16 +229,26 @@ function HexDroppable({
     const isValidTarget = isDragging && !occupied
 
     return (
-        <g ref={setNodeRef} id={id} style={{ transition: "transform 140ms ease" }}>
+        <g 
+            ref={setNodeRef} 
+            id={id} 
+            style={{ 
+                transition: "transform 140ms ease",
+                isolation: "isolate" // Prevents color bleeding between hexagons
+            }}
+        >
             <polygon
                 points={points}
                 fill="url(#hexFill)"
                 filter="url(#softShadow)"
                 style={{
-                    stroke: isOver ? "#f59e0b" : isValidTarget ? "#22c55e" : "rgba(255,255,255,0.35)",
-                    strokeWidth: isOver ? 2.2 : isValidTarget ? 2 : 1.25,
+                    stroke: isOver ? "#8b5cf6" : isValidTarget ? "#22c55e" : "rgba(255,255,255,0.35)",
+                    strokeWidth: isOver ? 1.8 : isValidTarget ? 1.5 : 1,
+                    strokeLinejoin: "miter",
+                    strokeLinecap: "butt",
                     cursor: "default",
                     transition: "stroke 140ms ease, stroke-width 140ms ease, fill-opacity 140ms ease",
+                    vectorEffect: "non-scaling-stroke" // Prevents stroke scaling issues
                 }}
             />
 
@@ -169,9 +258,13 @@ function HexDroppable({
                     points={points}
                     fill="none"
                     style={{
-                        stroke: isOver ? "#fbbf24" : "#34d399",
-                        strokeWidth: 4,
-                        strokeOpacity: 0.25,
+                        stroke: isOver ? "#a855f7" : "#34d399",
+                        strokeWidth: isOver ? 2.5 : 1.5,
+                        strokeOpacity: isOver ? 0.6 : 0.3,
+                        strokeLinejoin: "miter",
+                        strokeLinecap: "butt",
+                        strokeDasharray: isOver ? "none" : "3,2",
+                        vectorEffect: "non-scaling-stroke"
                     }}
                 />
             )}
@@ -188,23 +281,50 @@ function HexDroppable({
                 </g>
             )}
 
-            {/* Occupied marker */}
+            {/* Occupied marker with full card component */}
             {occupied && (
                 <g aria-label={`occupied by ${occupied.name}`}>
-                    <circle cx={cx} cy={cy} r={8} fill="#0ea5e9" opacity={0.9} />
-                    <text
-                        x={cx}
-                        y={cy + 4}
-                        className="select-none pointer-events-none"
-                        style={{
-                            fill: "white",
-                            font: "10px system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Helvetica Neue, Arial, Noto Sans",
-                            textAnchor: "middle",
-                            fontWeight: 700,
-                        }}
+                    <defs>
+                        <clipPath id={`hexClip-${occupied.id}`}>
+                            <polygon points={points} />
+                        </clipPath>
+                    </defs>
+                    
+                    {/* Semi-transparent background */}
+                    <polygon 
+                        points={points} 
+                        fill="rgba(0,0,0,0.2)"
+                        clipPath={`url(#hexClip-${occupied.id})`}
+                    />
+                    
+                    {/* Card component in foreignObject */}
+                    <foreignObject
+                        x={cx - 16.8}
+                        y={cy - 21}
+                        width={33.6}
+                        height={42}
+                        style={{ overflow: 'hidden' }}
                     >
-                        {occupied.name.slice(0, 1).toUpperCase()}
-                    </text>
+                        <div 
+                            style={{ 
+                                transform: 'scale(0.15)',
+                                transformOrigin: 'top left',
+                                width: '224px',
+                                height: '280px',
+                                filter: 'brightness(0.9)'
+                            }}
+                        >
+                            <CardView 
+                                card={{
+                                    id: occupied.id,
+                                    name: occupied.name,
+                                    cost: 1,
+                                    rarity: 'C',
+                                    clan: 'Board'
+                                }}
+                            />
+                        </div>
+                    </foreignObject>
                 </g>
             )}
 

@@ -18,7 +18,7 @@ export default function PlayerHand({ activeId }: Props) {
     return (
         <div className="relative w-full">
             <div className="hand-scroll w-full overflow-x-auto overflow-y-visible">
-                <div className="mx-auto w-fit flex items-end gap-4 px-6 py-4 min-h-[14rem]">
+                <div className="mx-auto w-fit flex items-end gap-4 px-6 py-2 min-h-[8rem]">
                     {cards.map(card => (
                         <DraggableCard key={card.id} card={card} activeId={activeId} />
                     ))}
