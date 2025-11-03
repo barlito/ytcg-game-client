@@ -1,7 +1,7 @@
 import React from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import CardView from './CardView'
-import type { CardData } from './CardView'
+import type { CardData } from '../../game/types'
 
 type Props = {
     card: CardData
@@ -21,7 +21,7 @@ export default function DraggableCard({ card, activeId }: Props) {
             ref={setNodeRef}
             {...listeners}
             {...attributes}
-            className="cursor-grab active:cursor-grabbing"
+            className="cursor-grab active:cursor-grabbing inline-block"
         >
             {/* Pas de tilt au hover pendant le drag */}
             <CardView card={card} muted={isActive} interactive={!isActive} />

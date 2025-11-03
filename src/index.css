@@ -1,10 +1,34 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-
+/* Custom scrollbars */
 .hand-scroll {
-    scrollbar-width: none;        /* Firefox */
-    -ms-overflow-style: none;     /* IE/Edge legacy */
+    scrollbar-width: thin;
+    scrollbar-color: #475569 transparent;
 }
-.hand-scroll::-webkit-scrollbar { display: none; } /* Chrome/Safari/Edge */
+.hand-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.hand-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.hand-scroll::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 3px;
+}
+.hand-scroll::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
 
+/* Hex animation for dashed stroke */
+@keyframes dash {
+    to {
+        stroke-dashoffset: 1000;
+    }
+}
+
+/* Smooth transitions */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

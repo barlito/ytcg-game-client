@@ -1,7 +1,7 @@
 import React from 'react'
 import { DragOverlay } from '@dnd-kit/core'
 import DragCardOverlay from './DragCardOverlay'
-import type { CardData } from './CardView'
+import type { CardData } from '../../game/types'
 
 export type Wind = { rx: number; ry: number; angle: number; strength: number }
 

@@ -1,6 +1,6 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useRef, useState, useMemo } from 'react'
 import Board from './components/board/Board'
-import PlayerHand from './components/hand/PlayerHand'
+import PlayerHand from './components/cards/PlayerHand'
 import {
     DndContext,
     PointerSensor,
@@ -8,14 +8,41 @@ import {
     useSensors,
     pointerWithin,
 } from '@dnd-kit/core'
-import DragLayer, { type Wind } from './components/hand/DragLayer'
+import DragLayer, { type Wind } from './components/cards/DragLayer'
+import DropPreview from './components/ui/DropPreview'
 import type { DragStartEvent, DragEndEvent, DragMoveEvent } from '@dnd-kit/core'
-import type { CardData } from './components/hand/CardView'
-import CardView from "./components/hand/CardView";
+import type { CardData, BoardCell } from './game/types'
+import { useGameRoom } from './game/hooks/useGameRoom'
+import { useDropValidation } from './game/hooks/useDropValidation'
+import { HexLayouts, hexToKey } from './game/utils/hexGrid'
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
 
 export default function App() {
+    // Connect to Colyseus server (or work in demo mode if server unavailable)
+    const {
+        gameState,
+        isConnected,
+        isConnecting,
+        error,
+        playCard,
+        endTurn,
+        reconnect
+    } = useGameRoom('game_room', false) // Don't auto-connect for now (demo mode)
+
+    // Initialize demo board state with all cells
+    const demoBoardState = useMemo(() => {
+        const board: Record<string, BoardCell> = {}
+        HexLayouts.SMALL.forEach(([q, r]) => {
+            const key = hexToKey({ q, r })
+            board[key] = {
+                coord: { q, r },
+                key,
+            }
+        })
+        return board
+    }, [])
+
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
     )
@@ -27,6 +54,13 @@ export default function App() {
     const [wind, setWind] = useState<Wind>({ rx: 0, ry: 0, angle: 0, strength: 0 })
     const prevRef = useRef<{ x: number; y: number; t: number } | null>(null)
 
+    // Drop validation (use demo board if no game state)
+    const dropValidation = useDropValidation(
+        gameState?.board ?? demoBoardState,
+        'player1', // TODO: Get from actual player ID
+        true       // TODO: Check if it's actually player's turn
+    )
+
     const handleDragStart = useCallback((e: DragStartEvent) => {
         setActiveId(String(e.active.id))
         const card = e.active.data.current?.card as CardData | undefined
@@ -36,6 +70,9 @@ export default function App() {
     }, [])
 
     const handleDragMove = useCallback((e: DragMoveEvent) => {
+        // Update drop validation
+        dropValidation.handleDragMove(e)
+
         if (!activeId || String(e.active.id) !== activeId) return
         const now = performance.now()
         const dx = e.delta.x
@@ -62,7 +99,7 @@ export default function App() {
 
         setWind({ rx, ry, angle, strength })
         prevRef.current = { x: dx, y: dy, t: now }
-    }, [activeId])
+    }, [activeId, dropValidation])
 
     const handleDragEnd = useCallback((e: DragEndEvent) => {
         if (e.over && e.over.id === 'board') {
@@ -72,19 +109,54 @@ export default function App() {
         setActiveId(null)
         setWind({ rx: 0, ry: 0, angle: 0, strength: 0 })
         prevRef.current = null
-    }, [])
+        dropValidation.reset()
+    }, [dropValidation])
+
+    const handleCardPlayed = useCallback((cardId: string, hexKey: string) => {
+        if (isConnected) {
+            // Send to server
+            playCard(cardId, hexKey)
+        } else {
+            // Demo mode: just log it
+            console.log('[Demo Mode] Card played:', cardId, 'at', hexKey)
+        }
+    }, [isConnected, playCard])
+
+    const handleEndTurn = useCallback(() => {
+        if (isConnected) {
+            endTurn()
+        } else {
+            console.log('[Demo Mode] End turn clicked')
+        }
+    }, [isConnected, endTurn])
 
     return (
-        <div className="min-h-screen grid grid-rows-[auto,1fr,auto] bg-base-200">
-            <header className="navbar bg-base-100/70 backdrop-blur border-b border-base-300 px-4">
-                <div className="flex-1">
-                    <a className="text-xl font-bold">Youl TCG</a>
+        <div className="h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
+            {/* Compact Header */}
+            <header className="h-14 bg-slate-950/80 backdrop-blur border-b border-slate-700/50 px-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                        Youl TCG
+                    </h1>
+                    {!isConnected && !isConnecting && (
+                        <div className="badge badge-warning badge-sm">Demo</div>
+                    )}
+                    {isConnecting && (
+                        <div className="badge badge-info badge-sm">Connecting...</div>
+                    )}
+                    {isConnected && (
+                        <div className="badge badge-success badge-sm">Live</div>
+                    )}
                 </div>
-                <div className="flex gap-3 items-center">
-          <span className="text-xs opacity-70">
-            WS: <code>{import.meta.env.VITE_SERVER_URL ?? 'n/a'}</code>
-          </span>
-                    <button className="btn btn-sm btn-primary">End Turn</button>
+                <div className="flex items-center gap-3">
+                    {error && (
+                        <button className="btn btn-xs btn-error" onClick={reconnect}>
+                            Reconnect
+                        </button>
+                    )}
+                    <button className="btn btn-sm btn-primary" onClick={handleEndTurn}>
+                        End Turn
+                    </button>
                 </div>
             </header>
 
@@ -95,20 +167,35 @@ export default function App() {
                 onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
             >
-                <main className="p-4">
-                    <div className="mx-auto max-w-6xl">
-                        <Board lastDrop={lastDrop} />
+                {/* Main Game Area - Flexbox horizontal */}
+                <main className="flex-1 flex items-center justify-center gap-6 p-6 min-h-0">
+                    {/* Board - Takes most space */}
+                    <div className="flex-1 h-full flex items-center justify-center">
+                        <Board
+                            lastDrop={lastDrop}
+                            board={gameState?.board ?? demoBoardState}
+                            onCardPlayed={handleCardPlayed}
+                        />
+                    </div>
+
+                    {/* Player Hand - Vertical on the right */}
+                    <div className="w-64 h-full flex flex-col">
+                        <div className="text-sm font-semibold text-slate-400 mb-3 px-2">
+                            Your Hand
+                        </div>
+                        <PlayerHand activeId={activeId} />
                     </div>
                 </main>
 
-                <footer className="bg-base-100/70 backdrop-blur border-t border-base-300 px-4 py-3">
-                    <div className="w-full">
-                        <PlayerHand activeId={activeId} />
-                    </div>
-                </footer>
-
                 <DragLayer activeCard={activeCard} wind={wind} />
             </DndContext>
+
+            {/* Drop validation feedback */}
+            <DropPreview
+                targetHex={dropValidation.currentTarget}
+                isValid={dropValidation.validationResult?.valid ?? false}
+                reason={dropValidation.validationResult?.reason}
+            />
         </div>
     )
 }

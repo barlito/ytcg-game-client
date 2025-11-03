@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import DraggableCard from './DraggableCard.tsx'
-import type { CardData } from './CardView'
+import type { CardData } from '../../game/types'
 
 type Props = {
     activeId: string | null
@@ -16,13 +16,11 @@ export default function PlayerHand({ activeId }: Props) {
     ]), [])
 
     return (
-        <div className="relative w-full">
-            <div className="hand-scroll w-full overflow-x-auto overflow-y-visible">
-                <div className="mx-auto w-fit flex items-end gap-4 px-6 py-4 min-h-[14rem]">
-                    {cards.map(card => (
-                        <DraggableCard key={card.id} card={card} activeId={activeId} />
-                    ))}
-                </div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="flex flex-col items-center gap-3 p-2">
+                {cards.map(card => (
+                    <DraggableCard key={card.id} card={card} activeId={activeId} />
+                ))}
             </div>
         </div>
     )

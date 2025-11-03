@@ -1,28 +1,22 @@
 import React, { useMemo, useState } from "react"
 import { useDroppable, useDndMonitor } from "@dnd-kit/core"
 import { defineHex, Grid } from "honeycomb-grid"
-import { useGameStore } from "../../stores/game"
+import { HexLayouts } from "../../game/utils/hexGrid"
+import type { BoardCell } from "../../game/types"
 
 type BoardProps = {
     lastDrop: string | null
+    board?: Record<string, BoardCell> // Optional: board state from Colyseus
+    onCardPlayed?: (cardId: string, hexKey: string) => void // Callback when card is dropped
 }
 
-const PRESET_CELLS: [number, number][] = [
-    [0, 0],
-    [1, 0],
-    [0, 1],
-    [-1, 1],
-    [1, -1],
-    [2, -1],
-    [2, 0],
-] as const
-
-export default function Board({ lastDrop }: BoardProps) {
+export default function Board({ lastDrop, board = {}, onCardPlayed }: BoardProps) {
     // Droppable global (pas d'effet visuel)
     const { setNodeRef } = useDroppable({ id: "board" })
 
-    const Hex = useMemo(() => defineHex({ dimensions: 28, origin: "topLeft" }), [])
-    const grid = useMemo(() => new Grid(Hex, PRESET_CELLS), [Hex])
+    // Hexagones beaucoup plus grands (80 au lieu de 28)
+    const Hex = useMemo(() => defineHex({ dimensions: 80, origin: "topLeft" }), [])
+    const grid = useMemo(() => new Grid(Hex, HexLayouts.SMALL), [Hex])
 
     const { polys, viewBox } = useMemo(() => {
         type Poly = { id: string; q: number; r: number; key: string; points: string; cx: number; cy: number }
@@ -57,56 +51,84 @@ export default function Board({ lastDrop }: BoardProps) {
 
     const [lastHexLog, setLastHexLog] = useState<string | null>(null)
     const [isDragging, setIsDragging] = useState(false)
+    const [hoveredHex, setHoveredHex] = useState<string | null>(null)
 
     useDndMonitor({
         onDragStart() {
             setIsDragging(true)
+            setHoveredHex(null)
         },
         onDragCancel() {
             setIsDragging(false)
+            setHoveredHex(null)
         },
         onDragEnd: (e) => {
             setIsDragging(false)
+            setHoveredHex(null)
             const overId = e.over?.id
             if (typeof overId === "string" && overId.startsWith("hex:")) {
                 const cardId = String(e.active.id)
-                const msg = `${cardId} → ${overId}`
+                const hexKey = overId.replace("hex:", "")
+                const msg = `${cardId} → ${hexKey}`
                 setLastHexLog(msg)
                 // eslint-disable-next-line no-console
                 console.log("[Board] Dropped", msg)
+
+                // Notify parent component (will send to server)
+                onCardPlayed?.(cardId, hexKey)
             }
         },
     })
 
-    const board = useGameStore((s) => s.board)
-
     return (
         <div
             ref={setNodeRef}
-            className="relative select-none rounded-xl border border-base-300 bg-base-100/60 backdrop-blur shadow-sm p-3"
+            className="relative select-none w-full h-full flex flex-col items-center justify-center"
             aria-label="Board (droppable)"
         >
-            <div className="flex items-center justify-between mb-2">
-                <span className="text-sm opacity-80">Mini map (honeycomb v4)</span>
-                <div className="flex items-center gap-2">
-                    {lastHexLog && (
-                        <span className="badge badge-sm badge-outline">Hex drop: {lastHexLog}</span>
-                    )}
-                    {lastDrop && (
-                        <span className="badge badge-sm badge-ghost">Board drop: {lastDrop}</span>
-                    )}
+            {/* Drop notification */}
+            {lastHexLog && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="badge badge-lg badge-success gap-2 shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-4 h-4 stroke-current">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Card dropped: {lastHexLog}
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <div className="w-full overflow-auto">
-                <svg className="w-full h-auto" viewBox={viewBox} role="img" aria-label="Hex map">
+            <div className="relative w-full h-full max-w-4xl max-h-full p-4">
+                <svg
+                    className="w-full h-full"
+                    viewBox={viewBox}
+                    preserveAspectRatio="xMidYMid meet"
+                    role="img"
+                    aria-label="Hex map"
+                >
                     <defs>
                         <linearGradient id="hexFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#4f46e5" />
-                            <stop offset="100%" stopColor="#1f2937" />
+                            <stop offset="0%" stopColor="#1e293b" />
+                            <stop offset="100%" stopColor="#0f172a" />
                         </linearGradient>
-                        <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
-                            <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.25" />
+                        <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+                            <feOffset dx="0" dy="2" result="offsetblur" />
+                            <feComponentTransfer>
+                                <feFuncA type="linear" slope="0.5" />
+                            </feComponentTransfer>
+                            <feMerge>
+                                <feMergeNode />
+                                <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                        </filter>
+                        {/* Glow effect for hover */}
+                        <filter id="glow">
+                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                            <feMerge>
+                                <feMergeNode in="coloredBlur"/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
                         </filter>
                     </defs>
 
@@ -118,10 +140,26 @@ export default function Board({ lastDrop }: BoardProps) {
                             label={`${p.q},${p.r}`}
                             cx={p.cx}
                             cy={p.cy}
-                            occupied={board[p.key]}
+                            occupied={board[p.key]?.card}
+                            ownerId={board[p.key]?.ownerId}
                             isDragging={isDragging}
+                            onHoverChange={setHoveredHex}
                         />
                     ))}
+
+                    {/* Hover overlay - rendered last to appear on top */}
+                    {hoveredHex && polys.find(p => p.id === hoveredHex) && (
+                        <polygon
+                            points={polys.find(p => p.id === hoveredHex)!.points}
+                            fill="none"
+                            style={{
+                                stroke: "#60a5fa",
+                                strokeWidth: 6,
+                                strokeOpacity: 1,
+                                pointerEvents: "none",
+                            }}
+                        />
+                    )}
                 </svg>
             </div>
         </div>
@@ -135,7 +173,9 @@ function HexDroppable({
                           cx,
                           cy,
                           occupied,
+                          ownerId,
                           isDragging,
+                          onHoverChange,
                       }: {
     id: string
     points: string
@@ -143,64 +183,88 @@ function HexDroppable({
     cx: number
     cy: number
     occupied?: { id: string; name: string } | undefined
+    ownerId?: string
     isDragging: boolean
+    onHoverChange: (id: string | null) => void
 }) {
     const { setNodeRef, isOver } = useDroppable({ id })
 
+    React.useEffect(() => {
+        if (isOver) {
+            onHoverChange(id)
+        }
+    }, [isOver, id, onHoverChange])
+
     const isValidTarget = isDragging && !occupied
 
+    // Color code territories by owner
+    const fillColor = ownerId
+        ? ownerId === 'player1' ? '#3b82f6' : '#ef4444'
+        : 'url(#hexFill)'
+
     return (
-        <g ref={setNodeRef} id={id} style={{ transition: "transform 140ms ease" }}>
+        <g ref={setNodeRef} id={id} style={{ transition: "all 200ms cubic-bezier(0.4, 0, 0.2, 1)" }}>
+            {/* Base polygon */}
             <polygon
                 points={points}
-                fill="url(#hexFill)"
-                filter="url(#softShadow)"
+                fill={fillColor}
+                fillOpacity={ownerId ? 0.5 : 0.95}
+                filter={isOver ? "url(#glow)" : "url(#softShadow)"}
                 style={{
-                    stroke: isOver ? "#f59e0b" : isValidTarget ? "#22c55e" : "rgba(255,255,255,0.35)",
-                    strokeWidth: isOver ? 2.2 : isValidTarget ? 2 : 1.25,
+                    stroke: "#475569",
+                    strokeWidth: 2,
                     cursor: "default",
-                    transition: "stroke 140ms ease, stroke-width 140ms ease, fill-opacity 140ms ease",
+                    transition: "all 200ms ease",
+                    transform: isOver ? 'scale(1.05)' : 'scale(1)',
+                    transformOrigin: `${cx}px ${cy}px`,
                 }}
             />
 
-            {/* Glow ring when hovered/over or valid target */}
-            {(isOver || isValidTarget) && (
+            {/* Bright fill on hover */}
+            {isOver && (
+                <polygon points={points} fill="rgba(96,165,250,0.15)" />
+            )}
+
+            {/* Green border for valid targets */}
+            {isValidTarget && !isOver && (
                 <polygon
                     points={points}
                     fill="none"
                     style={{
-                        stroke: isOver ? "#fbbf24" : "#34d399",
+                        stroke: "#4ade80",
                         strokeWidth: 4,
-                        strokeOpacity: 0.25,
+                        strokeOpacity: 0.8,
                     }}
                 />
             )}
 
-            {/* Subtle scale on over */}
-            {isOver && (
-                <g
+            {/* Animated dashed border for valid targets */}
+            {isValidTarget && !isOver && (
+                <polygon
+                    points={points}
+                    fill="none"
                     style={{
-                        transform: `translate(${cx}px, ${cy}px) scale(1.03) translate(${-cx}px, ${-cy}px)`,
-                        transition: "transform 140ms ease",
+                        stroke: "#4ade80",
+                        strokeWidth: 2,
+                        strokeOpacity: 0.4,
+                        strokeDasharray: "10,5",
+                        animation: "dash 20s linear infinite",
                     }}
-                >
-                    <polygon points={points} fill="rgba(255,255,255,0.05)" />
-                </g>
+                />
             )}
 
             {/* Occupied marker */}
             {occupied && (
                 <g aria-label={`occupied by ${occupied.name}`}>
-                    <circle cx={cx} cy={cy} r={8} fill="#0ea5e9" opacity={0.9} />
+                    <circle cx={cx} cy={cy} r={20} fill="#06b6d4" opacity={0.9} />
                     <text
                         x={cx}
-                        y={cy + 4}
+                        y={cy + 8}
                         className="select-none pointer-events-none"
                         style={{
                             fill: "white",
-                            font: "10px system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Helvetica Neue, Arial, Noto Sans",
+                            font: "bold 24px system-ui",
                             textAnchor: "middle",
-                            fontWeight: 700,
                         }}
                     >
                         {occupied.name.slice(0, 1).toUpperCase()}
@@ -208,15 +272,16 @@ function HexDroppable({
                 </g>
             )}
 
-            {/* Axial label */}
+            {/* Axial coordinates label */}
             <text
                 x={cx}
-                y={cy + 14}
+                y={cy + (occupied ? 35 : 8)}
                 className="select-none pointer-events-none"
                 style={{
-                    fill: "rgba(255,255,255,0.75)",
-                    font: "10px system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Helvetica Neue, Arial, Noto Sans",
+                    fill: "#94a3b8",
+                    font: "14px monospace",
                     textAnchor: "middle",
+                    fontWeight: 600,
                 }}
             >
                 {label}

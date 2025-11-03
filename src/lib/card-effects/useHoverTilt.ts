@@ -1,23 +1,51 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 
-type Options = {
-    maxRotate?: number      // amplitude du tilt (deg)
-    maxTranslate?: number   // léger déplacement XY (px)
-    scale?: number          // zoom au hover
+export type TiltOptions = {
+    maxRotate?: number      // Amplitude of tilt rotation (degrees)
+    maxTranslate?: number   // Slight XY displacement (pixels)
+    scale?: number          // Zoom on hover
+    attractMode?: boolean   // If true, card tilts toward cursor; if false, away from cursor
 }
 
-export function useHoverTilt({
-                                 maxRotate = 8,
-                                 maxTranslate = 8,
-                                 scale = 1.03,
-                             }: Options = {}) {
+export type TiltReturn = {
+    ref: React.RefObject<HTMLDivElement>
+    style: CSSProperties
+    shine: { xPct: number; yPct: number }
+    handlePointerMove: (e: React.PointerEvent) => void
+    reset: () => void
+}
+
+/**
+ * 3D Tilt effect on hover for card-like elements
+ *
+ * @param options - Configuration for tilt behavior
+ * @returns Object with ref, style, shine position, and event handlers
+ *
+ * @example
+ * ```tsx
+ * const tilt = useHoverTilt({ maxRotate: 10, scale: 1.05 })
+ * return (
+ *   <div ref={tilt.ref} onPointerMove={tilt.handlePointerMove} onPointerLeave={tilt.reset} style={tilt.style}>
+ *     <div style={{ background: `radial-gradient(at ${tilt.shine.xPct}% ${tilt.shine.yPct}%, white, transparent)` }} />
+ *   </div>
+ * )
+ * ```
+ */
+export function useHoverTilt(options: TiltOptions = {}): TiltReturn {
+    const {
+        maxRotate = 8,
+        maxTranslate = 8,
+        scale = 1.03,
+        attractMode = true,
+    } = options
+
     const ref = useRef<HTMLDivElement | null>(null)
     const raf = useRef<number | null>(null)
     const [style, setStyle] = useState<CSSProperties>({ transform: 'perspective(600px)' })
     const [shine, setShine] = useState<{ xPct: number; yPct: number }>({ xPct: 50, yPct: 50 })
 
-    // attract only: le curseur "attire" la carte
-    const sign = -1
+    // Attract mode: card tilts toward cursor; Repel mode: away from cursor
+    const sign = attractMode ? -1 : 1
 
     const animate = (rx: number, ry: number, tx: number, ty: number, xPct: number, yPct: number) => {
         if (raf.current) cancelAnimationFrame(raf.current)
