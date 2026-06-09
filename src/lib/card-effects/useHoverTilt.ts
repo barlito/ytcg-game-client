@@ -8,7 +8,7 @@ export type TiltOptions = {
 }
 
 export type TiltReturn = {
-    ref: React.RefObject<HTMLDivElement>
+    ref: React.RefObject<HTMLDivElement | null>
     style: CSSProperties
     shine: { xPct: number; yPct: number }
     handlePointerMove: (e: React.PointerEvent) => void

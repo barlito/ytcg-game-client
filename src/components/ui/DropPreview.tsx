@@ -1,4 +1,3 @@
-import React from "react"
 import type { HexKey } from "../../game/types"
 
 type Props = {

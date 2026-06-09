@@ -5,12 +5,11 @@ import { HexLayouts } from "../../game/utils/hexGrid"
 import type { BoardCell } from "../../game/types"
 
 type BoardProps = {
-    lastDrop: string | null
     board?: Record<string, BoardCell> // Optional: board state from Colyseus
     onCardPlayed?: (cardId: string, hexKey: string) => void // Callback when card is dropped
 }
 
-export default function Board({ lastDrop, board = {}, onCardPlayed }: BoardProps) {
+export default function Board({ board = {}, onCardPlayed }: BoardProps) {
     // Droppable global (pas d'effet visuel)
     const { setNodeRef } = useDroppable({ id: "board" })
 
@@ -23,7 +22,7 @@ export default function Board({ lastDrop, board = {}, onCardPlayed }: BoardProps
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
         const list: Poly[] = []
 
-        for (const hex of grid as any) {
+        for (const hex of grid as Iterable<{ q: number; r: number; corners: { x: number; y: number }[] }>) {
             const q: number = hex.q
             const r: number = hex.r
             const id = `hex:${q},${r}`
@@ -71,7 +70,7 @@ export default function Board({ lastDrop, board = {}, onCardPlayed }: BoardProps
                 const hexKey = overId.replace("hex:", "")
                 const msg = `${cardId} → ${hexKey}`
                 setLastHexLog(msg)
-                // eslint-disable-next-line no-console
+                 
                 console.log("[Board] Dropped", msg)
 
                 // Notify parent component (will send to server)
@@ -203,7 +202,7 @@ function HexDroppable({
         : 'url(#hexFill)'
 
     return (
-        <g ref={setNodeRef} id={id} style={{ transition: "all 200ms cubic-bezier(0.4, 0, 0.2, 1)" }}>
+        <g ref={(node) => setNodeRef(node as Element as HTMLElement)} id={id} style={{ transition: "all 200ms cubic-bezier(0.4, 0, 0.2, 1)" }}>
             {/* Base polygon */}
             <polygon
                 points={points}
