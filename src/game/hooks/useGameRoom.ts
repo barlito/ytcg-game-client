@@ -65,7 +65,7 @@ export function useGameRoom(roomName = 'game_room', autoConnect = true): UseGame
 
             setRoom(joinedRoom)
             setIsConnected(true)
-            console.log('[useGameRoom] Connected to room:', joinedRoom.id)
+            console.log('[useGameRoom] Connected to room:', joinedRoom.roomId)
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error'
             console.error('[useGameRoom] Connection failed:', errorMessage)

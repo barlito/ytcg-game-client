@@ -1,4 +1,3 @@
-import React from 'react'
 import CardView from './CardView'
 import type { CardData } from '../../game/types'
 

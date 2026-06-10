@@ -1,4 +1,4 @@
-import type { BoardCell, HexKey, GameState } from '../types'
+import type { BoardCell, HexKey } from '../types'
 
 /**
  * Game rules validation utilities
@@ -57,7 +57,7 @@ export function getValidDropTargets(
 ): Set<HexKey> {
     const validTargets = new Set<HexKey>()
 
-    for (const [hexKey, cell] of Object.entries(board)) {
+    for (const hexKey of Object.keys(board)) {
         const result = canPlayCardAt(hexKey, board, currentPlayerId, isPlayerTurn)
         if (result.valid) {
             validTargets.add(hexKey)

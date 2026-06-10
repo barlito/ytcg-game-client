@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useMemo } from 'react'
+import { useCallback, useRef, useState, useMemo } from 'react'
 import Board from './components/board/Board'
 import PlayerHand from './components/cards/PlayerHand'
 import {
@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/core'
 import DragLayer, { type Wind } from './components/cards/DragLayer'
 import DropPreview from './components/ui/DropPreview'
-import type { DragStartEvent, DragEndEvent, DragMoveEvent } from '@dnd-kit/core'
+import type { DragStartEvent, DragMoveEvent } from '@dnd-kit/core'
 import type { CardData, BoardCell } from './game/types'
 import { useGameRoom } from './game/hooks/useGameRoom'
 import { useDropValidation } from './game/hooks/useDropValidation'
@@ -49,7 +49,6 @@ export default function App() {
 
     const [activeCard, setActiveCard] = useState<CardData | null>(null)
     const [activeId, setActiveId] = useState<string | null>(null)
-    const [lastDrop, setLastDrop] = useState<string | null>(null)
 
     const [wind, setWind] = useState<Wind>({ rx: 0, ry: 0, angle: 0, strength: 0 })
     const prevRef = useRef<{ x: number; y: number; t: number } | null>(null)
@@ -101,10 +100,7 @@ export default function App() {
         prevRef.current = { x: dx, y: dy, t: now }
     }, [activeId, dropValidation])
 
-    const handleDragEnd = useCallback((e: DragEndEvent) => {
-        if (e.over && e.over.id === 'board') {
-            setLastDrop(String(e.active.id))
-        }
+    const handleDragEnd = useCallback(() => {
         setActiveCard(null)
         setActiveId(null)
         setWind({ rx: 0, ry: 0, angle: 0, strength: 0 })
@@ -172,7 +168,6 @@ export default function App() {
                     {/* Board - Takes most space */}
                     <div className="flex-1 h-full flex items-center justify-center">
                         <Board
-                            lastDrop={lastDrop}
                             board={gameState?.board ?? demoBoardState}
                             onCardPlayed={handleCardPlayed}
                         />
