@@ -1,69 +1,34 @@
-# React + TypeScript + Vite
+# YTCG Game Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Web client for **Youl TCG**, a trading card game played on a hexagonal board. This is the front-end companion to the [youl-tcg](https://github.com/barlito/youl-tcg) game server — see also the [youl-tcg-showcase](https://github.com/barlito/youl-tcg-showcase).
 
-Currently, two official plugins are available:
+Current state: a gameplay proof of concept — a hex map you can drag cards onto from your hand, with card tilt/motion effects.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Stack
 
-## Expanding the ESLint configuration
+- [React 19](https://react.dev/) + TypeScript, built with [Vite](https://vite.dev/)
+- [Zustand](https://github.com/pmndrs/zustand) for game state (hand, board)
+- [dnd-kit](https://dndkit.com/) for drag & drop (hand → hex tiles)
+- [react-hexgrid](https://github.com/Hellenic/react-hexgrid) for the hexagonal map
+- [Framer Motion](https://motion.dev/) and [react-parallax-tilt](https://github.com/mkosir/react-parallax-tilt) for card animations
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting started
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+With Docker (recommended):
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+make up        # docker compose up --build, dev server on http://localhost:5173
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Or locally with npm:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev    # dev server on http://localhost:5173
 ```
+
+Other commands: `npm run build` (type-check + production build), `npm run lint`, `npm run preview`.
+
+## Configuration
+
+- `VITE_SERVER_URL` — WebSocket URL of the game server (defaults to `ws://localhost:2567` in `docker-compose.yaml`).
